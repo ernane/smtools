@@ -1,0 +1,52 @@
+default_bucket: datarocket-stg-sagemaker
+default_instance_count: 1
+default_train_instance_type: ml.m5.xlarge
+
+services:
+  abalone:
+    pipelines:
+      training:
+        parameters:
+          input_data_uri: "@format s3://{this.default_bucket}/abalone/abalone-dataset.csv"
+          batch_data_uri: "@format s3://{this.default_bucket}/abalone/abalone-dataset-batch"
+          processing_instance_count: "@int @format {this.default_instance_count}"
+          train_instance_type: "@format {this.default_train_instance_type}"
+          model_approval_status: PendingManualApproval
+          mse_threshold: 6.0
+        steps:
+          sklearn_processor:
+            framework_version: 1.0-1
+            instance_type: "@format {this.default_train_instance_type}"
+            instance_count: "@int @format {this.default_instance_count}"
+
+products:
+  abalone:
+    training:
+      parameters:
+        input_data_uri: "@format s3://{this.default_bucket}/abalone/abalone-dataset.csv"
+        batch_data_uri: "@format s3://{this.default_bucket}/abalone/abalone-dataset-batch"
+        processing_instance_count: "@int @format {this.default_instance_count}"
+        train_instance_type: "@format {this.default_train_instance_type}"
+        model_approval_status: PendingManualApproval
+        mse_threshold: 6.0
+      steps:
+        pre_process_data:
+          name: PreProcessData
+          processor: SKLearnProcessor
+          base_job_name: sklearn-abalone-process
+          framework_version: 1.0-1
+          instance_type: "@format {this.default_train_instance_type}"
+          instance_count: "@int @format {this.default_instance_count}"
+          code: preprocessing.py
+          source_dir: ext/services/abalone/pipelines/training/code
+          inputs:
+            - input_name: raw
+              source: "@format {this.products.abalone.training.parameters.input_data_uri}"
+              destination: /opt/ml/processing/input
+          outputs:
+            - output_name: train
+              source: /opt/ml/processing/train
+            - output_name: validation
+              source: /opt/ml/processing/validation
+            - output_name: test
+              source: /opt/ml/processing/test
